@@ -6,8 +6,8 @@ import logging
 from PIL import Image
 from io import BytesIO
 
-from utils import preprocess_image  # Shared image preprocessing
-from similarity import check_similarity  # Medical image checker
+from utils import preprocess_image  # Now MobileNet-compatible
+from similarity import check_similarity  # Image type checker
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -20,7 +20,6 @@ labels_map = {
     0: "Healthy",
     1: "could have Osteoporosis"
 }
-
 
 @router.get("/")
 async def root():
@@ -45,7 +44,7 @@ async def predict_knee(request: Request, file: UploadFile = File(...)):
 
         # Preprocess image using shared utils
         img = Image.open(BytesIO(contents)).convert("RGB")
-        img_array = preprocess_image(img, model_type="knee")
+        img_array = preprocess_image(img, model_type="mobilenet")  # MobileNet-compatible 
 
         # Get model from app state
         knee_model = request.app.state.knee_model

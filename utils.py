@@ -2,8 +2,9 @@ import os
 import requests
 import numpy as np
 from tensorflow.keras.models import load_model
-from tensorflow.keras.applications.resnet50 import preprocess_input
 from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input as mobilenet_preprocess
 from tensorflow.keras import backend as K
 
 def load_model_from_azure(model_url: str):
@@ -31,15 +32,20 @@ def load_model_from_azure(model_url: str):
         print(f"Error loading model: {str(e)}")
         raise
 
-def preprocess_image(img):
+def preprocess_image(img, model_type="resnet"):
     """
-    Prepares an image for ResNet50:
+    Prepares an image for either ResNet50 or MobileNetV2:
     - Resizes to 224x224
     - Converts to array and adds batch dimension
-    - Applies ResNet50 preprocessing
+    - Applies model-specific preprocessing
     """
     img = img.resize((224, 224))
     img_array = image.img_to_array(img)
     img_array = np.expand_dims(img_array, axis=0)
-    img_array = preprocess_input(img_array)
+
+    if model_type.lower() == "mobilenet":
+        img_array = mobilenet_preprocess(img_array)
+    else:
+        img_array = resnet_preprocess(img_array)
+
     return img_array
