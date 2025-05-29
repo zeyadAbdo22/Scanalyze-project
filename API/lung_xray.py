@@ -1,95 +1,88 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Request
 from utils import preprocess_image
 from similarity import check_similarity
-
 from PIL import Image
 from io import BytesIO
 import numpy as np
 import logging
 import json
+import os
 
 # Configure logging
-logger = logging.getLogger("lung-xray")
-logger.setLevel(logging.INFO)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Initialize FastAPI router
+# Initialize router
 router = APIRouter()
 
-# Labels used by the lung x-ray classification model
-CLASS_LABELS = {
-    0: "Covid",
-    1: "Normal",
-    2: "Pneumonia",
-    3: "Tuberculosis"
-}
+# Class labels
+CLASS_LABELS = {0: "could have Covid",
+                1: "Normal",
+                2: "could have Pneumonia", 
+                3: "could have Tuberculosis"}
 
 
 @router.get("/")
-async def health_check():
-    """Basic health check endpoint."""
-    return {
-        "status": "healthy",
-        "message": "Chest X-ray API is up and running"
-    }
+async def root():
+    """Health check endpoint"""
+    return {"status": "healthy", "message": "Chest X-ray API is up and running"}
 
 
 @router.post("/predict")
-async def predict_lung_condition(request: Request, file: UploadFile = File(...)):
-    """
-    Predicts the lung condition (Covid, Pneumonia, etc.) from chest X-ray image.
-
-    Args:
-        request (Request): FastAPI request with model in app state.
-        file (UploadFile): Uploaded X-ray image.
-
-    Returns:
-        dict: Prediction results with class label and confidence.
-    """
+async def predict(request: Request, file: UploadFile = File(...)):
     try:
         logger.info(f"Received prediction request for file: {file.filename}")
 
-        # Ensure model is loaded in app state
+        # Get model from app state
         model = request.app.state.lung_xray_model
         if model is None:
-            raise ValueError("Lung X-ray model not initialized.")
+            raise ValueError("Model not initialized")
 
-        # Check if uploaded file is an image
+        # Validate file
         if not file.content_type.startswith("image/"):
-            raise HTTPException(status_code=400, detail="Uploaded file must be an image.")
+            raise HTTPException(status_code=400, detail="File must be an image")
 
-        # Read image bytes
-        image_bytes = await file.read()
+        contents = await file.read()
 
-        # Similarity check to validate if it's a medical image
-        similarity_response = check_similarity(image_bytes)
-        similarity_result = json.loads(similarity_response.body.decode())
-
-        logger.info(f"Similarity check result: {similarity_result}")
+        # Parse similarity check response
+        similar = check_similarity(contents)
+        similarity_data = similar.body.decode()  # Convert bytes to string
+        similarity_result = json.loads(similarity_data)  # Parse JSON string
 
         if similarity_result.get("prediction") == "not-medical":
-            raise HTTPException(status_code=400, detail="Uploaded file is not a medical image.")
+            raise HTTPException(
+                status_code=400,
+                detail="File is not a valid medical image"
+            )
 
-        # Convert image bytes to PIL image and preprocess
-        image_pil = Image.open(BytesIO(image_bytes)).convert("RGB")
-        preprocessed_image = preprocess_image(image_pil)
+        # Add logging for debugging
+        logger.info(f"Similarity check result: {similarity_data}")
 
-        # Run prediction
-        prediction = model.predict(preprocessed_image, verbose=0)
+
+        img = Image.open(BytesIO(contents)).convert("RGB")
+        img_array = preprocess_image(img)
+
+        # Predict
+        prediction = model.predict(img_array, verbose=0)
         predicted_class = int(np.argmax(prediction))
         confidence = float(np.max(prediction))
 
-        result_label = CLASS_LABELS[predicted_class]
-        logger.info(f"Prediction result: {result_label}, Confidence: {confidence:.2f}")
+
+        result = CLASS_LABELS[predicted_class]
+        logger.info(f"Prediction result: {result}")
 
         return {
             "success": True,
             "filename": file.filename,
-            "prediction": result_label,
+            "prediction": result,
             "confidence": confidence
         }
 
-    except HTTPException:
-        raise
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        logger.error(f"Prediction error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+        logger.error(f"Error during prediction: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Prediction failed: {str(e)}"
+        )

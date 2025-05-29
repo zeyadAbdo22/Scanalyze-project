@@ -1,93 +1,96 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Request
 from utils import preprocess_image
-from similarity import check_similarity
-
 import logging
 import json
 from io import BytesIO
 from PIL import Image
+from similarity import check_similarity
 
-# Setup logger
-logger = logging.getLogger("brain-tumor")
-logger.setLevel(logging.INFO)
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Initialize FastAPI router
+# Initialize router
 router = APIRouter()
 
-# Class labels for binary classification
-CLASS_LABELS = {
-    0: "might have a brain tumor",
-    1: "Healthy"
-}
+# Class labels for predictions
+CLASS_LABELS = {0: "could have brain tumor",
+                1: "Healthy"}
 
 
 @router.get("/")
-async def health_check():
-    """Health check endpoint."""
+async def root():
+    """Health check endpoint"""
     return {
         "status": "healthy",
         "message": "Brain Tumor Detection API is running"
     }
 
-
 @router.post("/predict")
-async def predict_brain_tumor(request: Request, file: UploadFile = File(...)):
+async def predict(request: Request, file: UploadFile = File(...)):
     """
-    Predicts brain tumor status from an uploaded image file.
-    
+    Endpoint to predict brain tumor from uploaded image
     Args:
-        request (Request): FastAPI request containing app state.
-        file (UploadFile): The uploaded image file.
-    
+        file: Uploaded image file
+        request: FastAPI request object to access app state
     Returns:
-        dict: A dictionary with prediction results.
+        dict: Prediction results including class and confidence
     """
     try:
-        logger.info(f"Received prediction request for: {file.filename}")
+        logger.info(f"Receiving prediction request for file: {file.filename}")
 
-        # Validate model availability
+        # Get model from app state
         brain_model = request.app.state.brain_model
         if brain_model is None:
-            raise ValueError("Brain tumor model is not loaded.")
+            raise ValueError("Brain tumor model not initialized")
 
-        # Validate file type
+        # Validate image file
         if not file.content_type.startswith("image/"):
-            raise HTTPException(status_code=400, detail="File must be an image.")
+            raise HTTPException(
+                status_code=400,
+                detail="File must be an image"
+            )
 
-        # Read image content
-        image_bytes = await file.read()
+        # Read and preprocess image
+        contents = await file.read()
 
-        # Run similarity check to confirm it's a medical image
-        similarity_response = check_similarity(image_bytes)
-        response_body = similarity_response.body.decode()
-        similarity_result = json.loads(response_body)
-
-        logger.info(f"Similarity check result: {similarity_result}")
+        # Parse similarity check response
+        similar = check_similarity(contents)
+        similarity_data = similar.body.decode()  # Convert bytes to string
+        similarity_result = json.loads(similarity_data)  # Parse JSON string
 
         if similarity_result.get("prediction") == "not-medical":
-            raise HTTPException(status_code=400, detail="Not a valid medical image.")
+            raise HTTPException(
+                status_code=400,
+                detail="File is not a valid medical image"
+            )
 
-        # Open and preprocess image
-        img = Image.open(BytesIO(image_bytes)).convert("RGB")
-        preprocessed = preprocess_image(img)
+        # Add logging for debugging
+        logger.info(f"Similarity check result: {similarity_data}")
 
-        # Run prediction
-        prediction = brain_model.predict(preprocessed, verbose=0)
+        img = Image.open(BytesIO(contents)).convert("RGB")
+        img_array = preprocess_image(img)
+
+        # Make prediction
+        prediction = brain_model.predict(img_array, verbose=0)
         predicted_class = int(prediction[0][0] > 0.5)
-        confidence_score = float(prediction[0][0])
+        confidence = float(prediction[0][0])
 
-        prediction_label = CLASS_LABELS[predicted_class]
-        logger.info(f"Prediction: {prediction_label} (confidence: {confidence_score:.2f})")
+        result = CLASS_LABELS[predicted_class]
+        logger.info(f"Prediction complete: {result}")
 
         return {
             "success": True,
             "filename": file.filename,
-            "prediction": prediction_label,
-            "confidence": confidence_score
+            "prediction": result,
+            "confidence": confidence,
         }
 
-    except HTTPException:
-        raise  # Allow FastAPI to handle HTTPExceptions directly
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        logger.error(f"Unexpected error during prediction: {e}")
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+        logger.error(f"Error during prediction: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Prediction failed: {str(e)}"
+        )
