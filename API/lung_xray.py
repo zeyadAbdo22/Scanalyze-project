@@ -17,7 +17,7 @@ router = APIRouter()
 
 # Class labels
 CLASS_LABELS = {0: "could be Covid",
-                1: "Normal",
+                1: "No abnormal findings detected",
                 2: "could be Pneumonia", 
                 3: "could be Tuberculosis"}
 

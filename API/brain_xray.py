@@ -15,7 +15,7 @@ router = APIRouter()
 
 # Class labels for predictions
 CLASS_LABELS = {0: "could be brain tumor",
-                1: "Healthy"}
+                1: "No abnormal findings detected"}
 
 
 @router.get("/")

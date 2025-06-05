@@ -15,7 +15,7 @@ router = APIRouter()
 # Class labels for prediction
 DR_CLASSES = {
     0: "could be Diabetic Retinopathy",
-    1: "Healthy"
+    1: "No abnormal findings detected"
 }
 
 @router.get("/")

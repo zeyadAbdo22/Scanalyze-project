@@ -17,7 +17,7 @@ router = APIRouter()
 
 # Knee model output labels
 labels_map = {
-    0: "Healthy",
+    0: "No abnormal findings detected",
     1: "could be Osteoporosis"
 }
 

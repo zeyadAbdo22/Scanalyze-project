@@ -17,7 +17,7 @@ router = APIRouter()
 
 # Define class labels
 LUNG_CLASSES = {0: "could be Adenocarcinoma"
-                , 1: "Normal",
+                , 1: "No abnormal findings detected",
                 2: "could be Squamous Cell Carcinoma"}
 
 

@@ -20,7 +20,7 @@ router = APIRouter()
 # Labels corresponding to kidney model output
 labels_map = {
     0: "could be Cyst",
-    1: "Normal",
+    1: "No abnormal findings detected",
     2: "could be Stone",
     3: "could be Tumor"
 }
