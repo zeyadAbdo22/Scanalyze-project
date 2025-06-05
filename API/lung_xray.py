@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Class labels
-CLASS_LABELS = {0: "could have Covid",
+CLASS_LABELS = {0: "could be Covid",
                 1: "Normal",
-                2: "could have Pneumonia", 
-                3: "could have Tuberculosis"}
+                2: "could be Pneumonia", 
+                3: "could be Tuberculosis"}
 
 
 @router.get("/")
@@ -60,7 +60,7 @@ async def predict(request: Request, file: UploadFile = File(...)):
 
 
         img = Image.open(BytesIO(contents)).convert("RGB")
-        img_array = preprocess_image(img)
+        img_array = preprocess_image(img,model_type="resnet")
 
         # Predict
         prediction = model.predict(img_array, verbose=0)

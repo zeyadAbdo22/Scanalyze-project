@@ -18,7 +18,7 @@ router = APIRouter()
 # Knee model output labels
 labels_map = {
     0: "Healthy",
-    1: "could have Osteoporosis"
+    1: "could be Osteoporosis"
 }
 
 @router.get("/")

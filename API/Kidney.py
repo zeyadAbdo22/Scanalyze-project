@@ -19,10 +19,10 @@ router = APIRouter()
 
 # Labels corresponding to kidney model output
 labels_map = {
-    0: "could have Cyst",
+    0: "could be Cyst",
     1: "Normal",
-    2: "could have Stone",
-    3: "could have Tumor"
+    2: "could be Stone",
+    3: "could be Tumor"
 }
 
 
@@ -60,7 +60,7 @@ async def predict_kidney(request: Request, file: UploadFile = File(...)):
 
         # Step 2: Load and preprocess image
         img = Image.open(BytesIO(contents)).convert("RGB")
-        img_array = preprocess_image(img)  # From utils, already handles resize and ResNet50 preprocessing
+        img_array = preprocess_image(img,model_type="resnet") # Use ResNet preprocessing as per model requirements
 
         # Step 3: Retrieve kidney model from FastAPI app state
         kidney_model = request.app.state.kidney_model

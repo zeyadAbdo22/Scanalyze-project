@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Define class labels
-LUNG_CLASSES = {0: "could have Adenocarcinoma"
+LUNG_CLASSES = {0: "could be Adenocarcinoma"
                 , 1: "Normal",
-                2: "could have Squamous Cell Carcinoma"}
+                2: "could be Squamous Cell Carcinoma"}
 
 
 @router.get("/")
@@ -55,7 +55,7 @@ async def predict(request: Request, file: UploadFile = File(...)):
         # Read and preprocess image
         contents = await file.read()
         img = Image.open(BytesIO(contents)).convert("RGB")
-        img_array = preprocess_image(img)
+        img_array = preprocess_image(img,model_type="resnet")
 
         # Make prediction
         prediction = lung_tissues_model.predict(img_array, verbose=0)

@@ -14,7 +14,7 @@ router = APIRouter()
 
 # Class labels for prediction
 DR_CLASSES = {
-    0: "could have Diabetic Retinopathy",
+    0: "could be Diabetic Retinopathy",
     1: "Healthy"
 }
 
@@ -40,7 +40,7 @@ async def predict(request: Request, file: UploadFile = File(...)):
         img = Image.open(BytesIO(contents)).convert("RGB")
 
         # Preprocess the image using shared utils
-        img_array = preprocess_image(img)  
+        img_array = preprocess_image(img,model_type="resnet")
 
         # Access the loaded model from app state
         dr_model = request.app.state.Diabetic_Retinopathy_model

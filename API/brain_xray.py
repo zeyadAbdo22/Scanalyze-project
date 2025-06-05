@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Class labels for predictions
-CLASS_LABELS = {0: "could have brain tumor",
+CLASS_LABELS = {0: "could be brain tumor",
                 1: "Healthy"}
 
 
@@ -69,7 +69,7 @@ async def predict(request: Request, file: UploadFile = File(...)):
         logger.info(f"Similarity check result: {similarity_data}")
 
         img = Image.open(BytesIO(contents)).convert("RGB")
-        img_array = preprocess_image(img)
+        img_array = preprocess_image(img,model_type="resnet")
 
         # Make prediction
         prediction = brain_model.predict(img_array, verbose=0)
